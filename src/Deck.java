@@ -60,6 +60,18 @@ public class Deck {
         return output;
     }
 
+    /**
+    Returns true if the combined values of all cards in the deck are 21 or greater.
+    */
+    public boolean deck21() {
+        int sum = 0;
+
+        for(Card card : deck)
+            sum += card.getValue();
+
+        return sum >= 21;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
