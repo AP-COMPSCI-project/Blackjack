@@ -7,7 +7,6 @@ public class Game {
     private static Deck deck;
     private static List<Card> playerHand;
     private static List<Card> compHand;
-    // These could probably be ArrayDeques but meh
     private static List<Card> playerPile;
     private static List<Card> compPile;
     private static List<Card>discard;
@@ -24,13 +23,13 @@ public class Game {
             // restarts the game if the user wants to play again
             while(true) {
                 System.out.print("Do you want to play again? ");
-                String status = input.next();
+                String response = input.next();
 
-                if (status.equalsIgnoreCase("yes")) {
+                if (response.equalsIgnoreCase("yes")) {
                     playAgain = true;
                     break;
                 }
-                else if (status.equalsIgnoreCase("no")) {
+                else if (response.equalsIgnoreCase("no")) {
                     playAgain = false;
                     break;
                 }
@@ -49,7 +48,6 @@ public class Game {
         init();
         run();
         gameOver();
-        return;
     }
 
     /**
@@ -70,7 +68,11 @@ public class Game {
     */
     private static void run() {
         gameLoop : while(true) {
-            // TODO check if game has been won
+            // check to see if the game has ended
+            if(deck.isEmpty())
+                return;
+            if(deck.deck21())
+                return;
 
             // deal two cards to each player
             playerHand.add(deck.deal());
@@ -83,7 +85,7 @@ public class Game {
             if (playerAutoWins() && compAutoWins()) {
                 System.out.println("It's a tie! Gold stars for everyone!");
                 System.out.println("The cards in both players hands go into the discard pile.");
-                printCompHand();
+                printCompHand(true);
                 printPlayerHand();
                 discard();
                 continue gameLoop;
@@ -92,14 +94,13 @@ public class Game {
                 printPlayerHand();
                 toPlayerPile();
                 continue gameLoop;
-            } else {
+            } else if(compAutoWins()) {
                 System.out.println("The house wins!");
-                printCompHand();
+                printCompHand(true);
                 toCompPile();
                 continue gameLoop;
             }
 
-            // TODO complete this crap
             // if not, begin player's turn
             String status;
             do {
@@ -115,6 +116,7 @@ public class Game {
 
                 printCompHand(false);
                 System.out.println("Do you want to hit or stand?");
+                printPlayerHand();
 
                 status = input.next();
 
@@ -125,19 +127,33 @@ public class Game {
                 else if(!status.equalsIgnoreCase("stand"))
                     System.out.println("Please say \"hit\" or \"stand\".");
             } while(!status.equalsIgnoreCase("stand"));
+
+            // once the player passes the turn, begin the house's turn
+            while(!compAutoWins() && !compBusts() && (compHand.get(0).getValue() + compHand.get(1).getValue() < 17)) {
+                System.out.println("It's now the house's turn...");
+                printCompHand(true);
+                compHand.add(deck.deal());
+                System.out.println("The house will now hit.");
+                printCompHand(true);
+            }
+
+            resolveWin();
         }
     }
 
-    private static void printPlayerHand() { System.out.println("" + playerHand.get(0) + playerHand.get(1)); }
+    private static void printPlayerHand() {
+        for(Card card : playerHand)
+            System.out.print(card + " ");
+        System.out.println();
+    }
 
     /**
     If the boolean arg is true, it will print both cards in the computer's hand. If false, it will only print the first.
     */
     private static void printCompHand(boolean secondCardRevealed) {
-        if(secondCardRevealed)
-            System.out.println(compHand.get(0) + " " + compHand.get(1));
-        else
-            System.out.println(compHand.get(0) + " ?");
+        for(int i = 0; i < compHand.size(); i++)
+            System.out.print( (i > 0 || secondCardRevealed ? compHand.get(i) : "???") + " ");
+        System.out.println();
     }
 
     /**
@@ -165,13 +181,12 @@ public class Game {
     */
     private static void toPlayerPile() {
         playerPile.add(playerHand.get(0));
-        playerHand.remove(0);
         playerPile.add(playerHand.get(1));
-        playerHand.remove(1);
+        playerHand.clear();
+
         playerPile.add(compHand.get(0));
-        compHand.remove(0);
         playerPile.add(compHand.get(1));
-        compHand.remove(1);
+        compHand.clear();
     }
 
     /**
@@ -179,13 +194,12 @@ public class Game {
      */
     private static void toCompPile() {
         compPile.add(playerHand.get(0));
-        playerHand.remove(0);
         compPile.add(playerHand.get(1));
-        playerHand.remove(1);
+        playerHand.clear();
+
         compPile.add(compHand.get(0));
-        compHand.remove(0);
         compPile.add(compHand.get(1));
-        compHand.remove(1);
+        compHand.clear();
     }
 
     /**
@@ -193,31 +207,55 @@ public class Game {
     */
     private static void discard() {
         discard.add(playerHand.get(0));
-        playerHand.remove(0);
         discard.add(playerHand.get(1));
-        playerHand.remove(1);
+
         discard.add(compHand.get(0));
-        compHand.remove(0);
         discard.add(compHand.get(1));
-        compHand.remove(1);
+
+        playerHand.clear();
+        compHand.clear();
     }
 
     /**
     Figures out who won the round and displays the appropriate message.
     */
     private static void resolveWin() {
+        int playerScore = 0;
+        int compScore = 0;
 
+        for(Card card : playerHand)
+            playerScore += card.getValue();
+
+        for(Card card : compHand)
+            compScore += card.getValue();
+
+        if(playerScore > compScore) {
+            System.out.println("You win this hand!");
+            toPlayerPile();
+        } else if(compScore > playerScore) {
+            System.out.println("The house wins this hand!");
+            toCompPile();
+        } else {
+            System.out.println("It's a tie!");
+            discard();
+        }
     }
 
     /**
      Figures out who won the game and displays the appropriate message.
     */
     private static void gameOver() {
-
+        if(playerPile.size() > compPile.size()) {
+            System.out.println("Congrats on winning!");
+        } else if(playerPile.size() < compPile.size()) {
+            System.out.println("Unfortunately you've lost!");
+        } else {
+            System.out.println("It's a tie!");
+        }
     }
 
     /**
-    For multiple blank lines.
+    For multiple blank lines. Possibly unnecessary.
     */
     private void newlines(int numberOfLines) {
         for(int i = 0; i < numberOfLines; i++)

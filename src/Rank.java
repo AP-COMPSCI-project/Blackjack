@@ -10,17 +10,4 @@ public enum Rank {
     Rank(int value) { this.value = value; }
 
     public int getValue() { return value; }
-    private void changeValue(int newValue) { value = newValue; }
-
-    /**
-    If the passed in rank is an ace, it will toggle its value from 1 to 11 and vice versa.
-     It will do nothing if the value isn't an ace.
-    */
-    public void changeValue(Rank rank) {
-        if(rank == ACE)
-            if(rank.getValue() == 1)
-                rank.changeValue(11);
-            else
-                rank.changeValue(1);
-    }
 }
